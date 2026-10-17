@@ -34,7 +34,9 @@ excel/                         Susanna_Birthday_Party_RSVP.xlsx — шаблон
 tests/rsvp.test.ts             Модульные тесты логики анкеты (vitest)
 scripts/e2e-rsvp.mjs           Сквозной тест в браузере
 scripts/mock_flow.py           Локальная имитация потока Power Automate
-docs/EXCEL_SETUP.md            Подключение Excel и доступ для Susánna
+docs/GOOGLE_SHEETS_SETUP.md    Подключение к Google Таблице (личный Gmail) — рекомендуется
+docs/EXCEL_SETUP.md            Подключение к Excel через Power Automate (рабочий Microsoft 365)
+scripts/google-apps-script.gs  Код для Google Таблицы
 docs/TEST_REPORT.md            Что проверено
 ```
 
@@ -55,7 +57,8 @@ npm run build      # сборка в dist/
 1. Загрузите проект в репозиторий GitHub (можно приватный).
 2. На vercel.com нажмите **Add New → Project** и выберите репозиторий. Фреймворк *Vite*
    определится сам.
-3. В **Environment Variables** добавьте переменные из `docs/EXCEL_SETUP.md`.
+3. В **Environment Variables** добавьте переменные из `docs/GOOGLE_SHEETS_SETUP.md`
+   (или `docs/EXCEL_SETUP.md` для рабочего аккаунта Microsoft 365).
 4. Нажмите **Deploy**. Получится ссылка вида `https://susanna-party.vercel.app`, имя можно
    поменять в Settings → Domains.
 

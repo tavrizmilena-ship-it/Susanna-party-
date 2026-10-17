@@ -177,9 +177,52 @@ async function saveViaGraph(row: (string | number)[], env: Env): Promise<SaveRes
   return { status: 'saved' };
 }
 
+/* ------------------------- Google Таблица (Apps Script) ------------------------- */
+/**
+ * Для личных аккаунтов (Gmail): веб-приложение Google Apps Script добавляет строку
+ * в Google Таблицу (код скрипта — scripts/google-apps-script.gs). Таблицу можно
+ * в любой момент скачать как .xlsx. Apps Script не видит заголовки запроса,
+ * поэтому секрет передаётся в теле — это запрос «сервер → Google», браузер его не видит.
+ */
+async function saveViaGoogleSheets(row: (string | number)[], env: Env): Promise<SaveResult> {
+  const url = env.GOOGLE_SCRIPT_URL;
+  const secret = env.RSVP_SHARED_SECRET;
+  if (!url || !secret) throw new NotConfiguredError('GOOGLE_SCRIPT_URL / RSVP_SHARED_SECRET are not set');
+  const body = JSON.stringify({
+    secret,
+    timestamp: row[0],
+    guestName: row[1],
+    willAttend: row[2],
+    totalPeople: row[3],
+    additionalGuests: row[4],
+    submissionId: row[5],
+  });
+  let lastError = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let res: Response;
+    try {
+      // Apps Script отвечает редиректом 302 на страницу с результатом — fetch проходит его сам
+      res = await fetchWithTimeout(url, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body, redirect: 'follow' }, 25000);
+    } catch (e) {
+      lastError = `network: ${(e as Error).message}`;
+      await sleep(700 * (attempt + 1));
+      continue;
+    }
+    const text = await res.text();
+    let parsed: { status?: string } = {};
+    try { parsed = JSON.parse(text); } catch { /* ниже — ошибка */ }
+    if (res.ok && (parsed.status === 'saved' || parsed.status === 'duplicate')) return { status: parsed.status };
+    lastError = `apps script ${res.status}: ${text.slice(0, 200)}`;
+    if (res.status === 429 || res.status >= 500) { await sleep(900 * (attempt + 1)); continue; }
+    break;
+  }
+  throw new StorageError(lastError);
+}
+
 export async function saveRsvp(row: (string | number)[], env: Env): Promise<SaveResult> {
   const driver = (env.EXCEL_DRIVER || 'power-automate').trim();
   if (driver === 'power-automate') return saveViaPowerAutomate(row, env);
   if (driver === 'graph') return saveViaGraph(row, env);
+  if (driver === 'google-sheets') return saveViaGoogleSheets(row, env);
   throw new NotConfiguredError(`Unknown EXCEL_DRIVER "${driver}"`);
 }
