@@ -1,0 +1,38 @@
+{
+  "name": "susanna-birthday-party",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc",
+    "test": "vitest run",
+    "art": "python3 scripts/prepare-art.py"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/great-vibes": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/italianno": "^5.3.0",
+    "@fontsource/jost": "^5.3.0",
+    "@fontsource/marck-script": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "playwright-core": "^1.64.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vite-plugin-singlefile": "^2.0.3",
+    "vitest": "^2.1.8"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
