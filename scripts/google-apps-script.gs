@@ -59,23 +59,37 @@ function doPost(e) {
   }
   if (data.secret !== SECRET) return out({ status: 'unauthorized' });
 
-  var lock = LockService.getScriptLock();
-  lock.waitLock(20000); // одновременные ответы записываются по очереди
   try {
-    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET);
-    var last = sh.getLastRow();
-    if (last > 1) {
-      var ids = sh.getRange(2, 6, last - 1, 1).getValues().map(function (r) { return r[0]; });
-      if (ids.indexOf(data.submissionId) !== -1) return out({ status: 'duplicate' });
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return out({ status: 'error', error: 'no_spreadsheet' });
+    var sh = ss.getSheetByName(SHEET);
+    if (!sh) { // лист удалили или setup не запускали — создаём заново
+      sh = ss.insertSheet(SHEET);
+      sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
+      sh.setFrozenRows(1);
     }
-    sh.appendRow([
-      String(data.timestamp), String(data.guestName), String(data.willAttend),
-      Number(data.totalPeople), Number(data.additionalGuests), String(data.submissionId),
-    ]);
-    SpreadsheetApp.flush();
-    return out({ status: 'saved' });
-  } finally {
-    lock.releaseLock();
+    // проверка связи с сайта: ничего не записываем
+    if (data.action === 'ping') return out({ status: 'pong', rows: Math.max(0, sh.getLastRow() - 1) });
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(20000); // одновременные ответы записываются по очереди
+    try {
+      var last = sh.getLastRow();
+      if (last > 1) {
+        var ids = sh.getRange(2, 6, last - 1, 1).getValues().map(function (r) { return r[0]; });
+        if (ids.indexOf(data.submissionId) !== -1) return out({ status: 'duplicate' });
+      }
+      sh.appendRow([
+        String(data.timestamp), String(data.guestName), String(data.willAttend),
+        Number(data.totalPeople), Number(data.additionalGuests), String(data.submissionId),
+      ]);
+      SpreadsheetApp.flush();
+      return out({ status: 'saved' });
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (err) {
+    return out({ status: 'error', error: String(err) });
   }
 }
 

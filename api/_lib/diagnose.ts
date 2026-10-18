@@ -7,6 +7,59 @@ import type { Env } from './excel.js';
 
 type Step = { ok: boolean | null; title: string; detail: string };
 
+const stripHtml = (t: string) =>
+  t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Запрос с НАСТОЯЩИМ секретом и пометкой action: 'ping'. Новая версия скрипта отвечает 'pong'
+ * и ничего не записывает. Старая версия (без ping) запишет одну строку с пометкой «проверка» —
+ * она одна (повтор отсекается по Submission ID) и её можно удалить.
+ */
+async function checkRealSecret(url: string, secret: string, add: (ok: boolean | null, t: string, d: string) => void) {
+  const title = 'Ваше секретное слово';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        secret,
+        action: 'ping',
+        timestamp: 'ПРОВЕРКА СВЯЗИ — эту строку можно удалить',
+        guestName: 'Проверка связи (удалите строку)',
+        willAttend: '—',
+        totalPeople: 0,
+        additionalGuests: 0,
+        submissionId: 'diagnostic-ping',
+      }),
+      redirect: 'follow',
+    });
+    const text = await res.text();
+    let json: { status?: string; error?: string; rows?: number } | null = null;
+    try { json = JSON.parse(text); } catch { /* HTML-ошибка Google */ }
+    if (json?.status === 'pong') {
+      add(true, title, `Скрипт принимает ваше слово, лист «RSVP Responses» найден (ответов: ${json.rows ?? 0}). Анкета должна сохраняться.`);
+    } else if (json?.status === 'saved' || json?.status === 'duplicate') {
+      add(true, title, 'Скрипт принимает ваше слово и записывает строки — всё работает. В таблице появилась строка «Проверка связи» — её можно удалить. (Это старая версия кода скрипта; обновлять не обязательно.)');
+    } else if (json?.status === 'unauthorized') {
+      add(false, title, 'Скрипт НЕ принимает ваше слово. Причина одна из двух: (1) слово в Vercel и в строке const SECRET отличается хотя бы одним символом; (2) слово вписано в код ПОСЛЕ развёртывания — опубликована старая версия. Решение для (2): Apps Script → Начать развёртывание → Управление развёртываниями → карандаш → Версия: «Новая версия» → Начать развёртывание.');
+    } else if (json?.error === 'no_spreadsheet') {
+      add(false, title, 'Скрипт не привязан к таблице. Откройте именно таблицу → Расширения → Apps Script, вставьте код туда и разверните.');
+    } else if (json) {
+      add(false, title, `Скрипт ответил ошибкой: ${text.slice(0, 200)}`);
+    } else {
+      const msg = stripHtml(text).slice(0, 220);
+      const hint = /getLastRow|getRange|null/i.test(msg)
+        ? ' Похоже, в таблице нет листа «RSVP Responses»: в Apps Script выберите функцию setup и нажмите «Выполнить», затем разверните новую версию.'
+        : /getActiveSpreadsheet|openById/i.test(msg)
+          ? ' Похоже, скрипт создан отдельно от таблицы. Откройте таблицу → Расширения → Apps Script и вставьте код туда.'
+          : '';
+      add(false, title, `Скрипт упал с ошибкой (код ${res.status}): «${msg}».${hint}`);
+    }
+  } catch (e) {
+    add(false, title, `Не удалось связаться со скриптом: ${(e as Error).message}`);
+  }
+}
+
 export async function diagnose(env: Env): Promise<string> {
   const steps: Step[] = [];
   const add = (ok: boolean | null, title: string, detail: string) => steps.push({ ok, title, detail });
@@ -64,6 +117,7 @@ export async function diagnose(env: Env): Promise<string> {
       try { json = JSON.parse(text); } catch { /* не JSON */ }
       if (json?.status === 'unauthorized') {
         add(true, 'Скрипт Google', 'Скрипт опубликован, доступен всем и отвечает. Проверочный запрос с неверным словом он правильно отклонил.');
+        if (secret) await checkRealSecret(url, secret, add);
       } else if (json) {
         add(false, 'Скрипт Google', `Скрипт ответил неожиданно: ${text.slice(0, 120)}. Проверьте, что в Apps Script вставлен код целиком.`);
       } else if (res.status === 404) {
@@ -89,7 +143,7 @@ export async function diagnose(env: Env): Promise<string> {
     ...steps.map((s) => `${s.ok === true ? '✅' : s.ok === false ? '❌' : '⏸'} ${s.title}: ${s.detail}`),
     '',
     allOk
-      ? 'Всё подключено. Если анкета всё равно пишет, что ответ не сохранён, значит секретное слово в Vercel и в скрипте Google отличается (сравните по буквам) или после правки кода скрипт не развёрнут заново (Управление развёртываниями → карандаш → Новая версия).'
+      ? 'Всё подключено: анкета должна сохранять ответы. Отправьте тестовую анкету на сайте и проверьте лист «RSVP Responses».'
       : 'Исправьте пункты с ❌. После изменения переменных в Vercel обязательно сделайте Deployments → ⋯ → Redeploy и откройте эту страницу снова.',
   ];
   return lines.join('\n');
