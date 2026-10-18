@@ -1,0 +1,9 @@
+*.log
+*.zip
+.env
+.env.*.local
+.env.local
+.vercel
+dist
+dist-preview
+node_modules
