@@ -7,8 +7,8 @@
  *
  * Все секреты (адрес потока, токены) хранятся только в переменных окружения сервера.
  */
-import type { RsvpClean } from './validate';
-import { excelSafe } from './validate';
+import type { RsvpClean } from './validate.js';
+import { excelSafe } from './validate.js';
 
 export type Env = Record<string, string | undefined>;
 export type SaveResult = { status: 'saved' | 'duplicate' };

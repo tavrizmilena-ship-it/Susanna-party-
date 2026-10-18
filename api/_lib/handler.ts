@@ -1,6 +1,6 @@
-import { validateRsvp, type RsvpInput } from './validate';
-import { buildRow, saveRsvp, NotConfiguredError, type Env } from './excel';
-import { diagnose } from './diagnose';
+import { validateRsvp, type RsvpInput } from './validate.js';
+import { buildRow, saveRsvp, NotConfiguredError, type Env } from './excel.js';
+import { diagnose } from './diagnose.js';
 
 const MAX_BODY = 8 * 1024;
 const RATE_WINDOW_MS = 10 * 60 * 1000;

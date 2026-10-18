@@ -3,7 +3,7 @@
  * Проверяет переменные окружения и доступность скрипта Google, не показывая секретов
  * и ничего не записывая в таблицу (скрипту отправляется заведомо неверный секрет).
  */
-import type { Env } from './excel';
+import type { Env } from './excel.js';
 
 type Step = { ok: boolean | null; title: string; detail: string };
 

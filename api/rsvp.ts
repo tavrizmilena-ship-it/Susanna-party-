@@ -2,7 +2,7 @@
  * Vercel Function: POST /api/rsvp
  * Принимает анкету, проверяет её на сервере и записывает строку в Excel.
  */
-import { handleRsvp } from './_lib/handler';
+import { handleRsvp } from './_lib/handler.js';
 
 export function POST(request: Request): Promise<Response> {
   return handleRsvp(request, process.env);
