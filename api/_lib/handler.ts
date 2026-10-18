@@ -1,5 +1,6 @@
 import { validateRsvp, type RsvpInput } from './validate';
 import { buildRow, saveRsvp, NotConfiguredError, type Env } from './excel';
+import { diagnose } from './diagnose';
 
 const MAX_BODY = 8 * 1024;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
@@ -23,6 +24,14 @@ function rateLimited(ip: string): boolean {
 }
 
 export async function handleRsvp(request: Request, env: Env): Promise<Response> {
+  if (request.method === 'GET' && new URL(request.url).searchParams.has('check')) {
+    const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+    if (rateLimited(`check:${ip}`)) return json(429, { ok: false, error: 'too_many_requests' });
+    return new Response(await diagnose(env), {
+      status: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
   if (request.method !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
 
   const type = request.headers.get('content-type') || '';

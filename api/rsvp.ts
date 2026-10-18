@@ -8,9 +8,7 @@ export function POST(request: Request): Promise<Response> {
   return handleRsvp(request, process.env);
 }
 
-export function GET(): Response {
-  return new Response(JSON.stringify({ ok: false, error: 'method_not_allowed' }), {
-    status: 405,
-    headers: { 'content-type': 'application/json', allow: 'POST' },
-  });
+/** GET /api/rsvp?check=1 — самопроверка подключения (без секретов и без записи в таблицу) */
+export function GET(request: Request): Promise<Response> {
+  return handleRsvp(request, process.env);
 }

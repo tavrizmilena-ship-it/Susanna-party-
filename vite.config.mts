@@ -14,7 +14,7 @@ function devApi(env: Record<string, string>): Plugin {
         for await (const c of req) chunks.push(c as Buffer);
         const headers = new Headers();
         for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
-        const request = new Request('http://localhost/api/rsvp', {
+        const request = new Request(`http://localhost/api/rsvp${(req.url || '').replace(/^\/?/, '').startsWith('?') ? (req.url || '').replace(/^\//, '') : ''}`, {
           method: req.method,
           headers,
           body: req.method === 'POST' ? Buffer.concat(chunks) : undefined,
